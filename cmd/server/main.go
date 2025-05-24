@@ -22,10 +22,11 @@ func main() {
 	// Create Ollama client and agent
 	client := ollama.NewClient(*ollamaURL)
 	codeAgent := agent.NewAgent(client, *model)
+	chatHistory := make([]ollama.ConversationItem, 0)
 
 	fmt.Println("Go Ollama Code Agent")
 	fmt.Println("-------------------")
-	fmt.Println("Enter your code generation prompt (type 'exit' to quit):")
+	fmt.Println("Enter your code generation prompt (type 'clear' to clear chat history or type 'exit' to quit):")
 
 	scanner := bufio.NewScanner(os.Stdin)
 	for {
@@ -36,7 +37,15 @@ func main() {
 
 		userInput := scanner.Text()
 		if userInput == "exit" {
+			fmt.Println("See ya!")
 			break
+		}
+
+		if userInput == "clear" {
+			// Clear the chat history
+			chatHistory = make([]ollama.ConversationItem, 0)
+			fmt.Println("Chat history cleared.")
+			continue
 		}
 
 		// Skip empty inputs
@@ -45,13 +54,14 @@ func main() {
 		}
 
 		// Generate code based on user input
-		responseChannel, errChannel := codeAgent.GenerateCode(userInput)
+		responseChannel, errChannel := codeAgent.GenerateCodeWithHistory(userInput, chatHistory)
 
 		// Display the generated code
 		fmt.Println("\nGenerated Code:")
 		fmt.Println("---------------")
 
 		// For character-by-character printing
+		var responseText strings.Builder
 		done := false
 		for !done {
 			select {
@@ -61,9 +71,9 @@ func main() {
 					done = true
 					break
 				}
-
+				responseText.WriteString(chunk.Message.Content)
 				// Print the response character by character with a delay
-				for _, char := range chunk.Response {
+				for _, char := range chunk.Message.Content {
 					fmt.Print(string(char))
 					// Flush stdout to ensure immediate display
 					os.Stdout.Sync()
@@ -88,6 +98,16 @@ func main() {
 		}
 
 		fmt.Println("\n---------------")
+		// Add the current exchange to history
+		chatHistory = append(chatHistory, ollama.ConversationItem{
+			Role:    "user",
+			Content: userInput,
+		})
+
+		chatHistory = append(chatHistory, ollama.ConversationItem{
+			Role:    "assistant",
+			Content: responseText.String(),
+		})
 	}
 
 	if err := scanner.Err(); err != nil {

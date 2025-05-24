@@ -57,6 +57,25 @@ type StreamingCompletionResponse struct {
 	Done      bool   `json:"done"`
 }
 
+type ConversationItem struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
+}
+
+type ChatRequest struct {
+	Model    string                 `json:"model"`
+	Messages []ConversationItem     `json:"messages"`
+	Stream   bool                   `json:"stream,omitempty"`
+	Options  map[string]interface{} `json:"options,omitempty"`
+}
+
+type ChatStreamResponse struct {
+	Model     string           `json:"model"`
+	Message   ConversationItem `json:"message"`
+	CreatedAt string           `json:"created_at"`
+	Done      bool             `json:"done"`
+}
+
 func (c *Client) CreateCompletionStream(req CompletionRequest) (chan StreamingCompletionResponse, chan error) {
 	responseChannel := make(chan StreamingCompletionResponse)
 	errorChannel := make(chan error, 1)
@@ -82,6 +101,52 @@ func (c *Client) CreateCompletionStream(req CompletionRequest) (chan StreamingCo
 
 		for {
 			var chunk StreamingCompletionResponse
+			if err := decoder.Decode(&chunk); err != nil {
+				if err == io.EOF {
+					return
+				}
+				errorChannel <- fmt.Errorf("error decoding stream: %w", err)
+				return
+			}
+
+			// Send the chunk to the channel
+			responseChannel <- chunk
+
+			// Check if this is the end of the stream
+			if chunk.Done {
+				return
+			}
+		}
+	}()
+
+	return responseChannel, errorChannel
+}
+
+func (c *Client) CreateChatStream(req ChatRequest) (chan ChatStreamResponse, chan error) {
+	responseChannel := make(chan ChatStreamResponse)
+	errorChannel := make(chan error, 1)
+
+	go func() {
+		defer close(responseChannel)
+		defer close(errorChannel)
+
+		resp, err := c.SendRequest("/api/chat", req)
+		if err != nil {
+			errorChannel <- err
+			return
+		}
+
+		defer resp.Body.Close()
+
+		if resp.StatusCode != 200 {
+			errorChannel <- fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+			return
+		}
+
+		decoder := json.NewDecoder(resp.Body)
+
+		for {
+			var chunk ChatStreamResponse
 			if err := decoder.Decode(&chunk); err != nil {
 				if err == io.EOF {
 					return
