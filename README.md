@@ -1,7 +1,7 @@
 # go-ollama-agent
 
 ## Overview
-Exercise in learning how to create a coding agent. Currently supports single requests with code response in terminal.
+Exercise in learning how to create a coding agent. Currently supports chat with history in the terminal.
 
 ## Getting Started
 
@@ -46,7 +46,7 @@ Supports the following flags:
 
 ## Future Features / Ideas
 
-- Chat w/ history
+- code syntax highlighting
 - "Code Review" agent option
 
 The end state I'd like to get to is a system where you can queue coding "jobs", where solution files are generated and reviewed, then provided back to the user in some form.
