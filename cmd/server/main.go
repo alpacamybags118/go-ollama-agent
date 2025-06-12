@@ -23,6 +23,7 @@ func main() {
 	client := ollama.NewClient(*ollamaURL)
 	codeAgent := agent.NewAgent(client, *model)
 	chatHistory := make([]ollama.ConversationItem, 0)
+	var lastResponse string
 
 	fmt.Println("Go Ollama Code Agent")
 	fmt.Println("-------------------")
@@ -45,6 +46,24 @@ func main() {
 			// Clear the chat history
 			chatHistory = make([]ollama.ConversationItem, 0)
 			fmt.Println("Chat history cleared.")
+			continue
+		}
+
+		if strings.HasPrefix(userInput, "save ") {
+			// Extract the filename
+			filename := strings.TrimSpace(strings.TrimPrefix(userInput, "save "))
+			if filename == "" {
+				fmt.Println("Please provide a valid filename.")
+				continue
+			}
+
+			// Save the last response to the file
+			err := os.WriteFile(filename, []byte(lastResponse), 0644)
+			if err != nil {
+				fmt.Printf("Error saving file: %v\n", err)
+			} else {
+				fmt.Printf("Response saved to %s\n", filename)
+			}
 			continue
 		}
 
@@ -99,6 +118,8 @@ func main() {
 
 		fmt.Println("\n---------------")
 		// Add the current exchange to history
+
+		lastResponse = responseText.String()
 		chatHistory = append(chatHistory, ollama.ConversationItem{
 			Role:    "user",
 			Content: userInput,

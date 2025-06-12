@@ -16,12 +16,9 @@ type Agent struct {
 // NewAgent creates a new agent with the specified Ollama client and model
 func NewAgent(client *ollama.Client, model string) *Agent {
 	return &Agent{
-		client: client,
-		model:  model,
-		systemPrompt: `You are an expert software engineer AI assistant. Write clean, efficient, and well-documented code. Address the user's request directly. Include comments for complex sections. Follow best practices. Use the requested programming language or the most appropriate one. Wrap code blocks with:
-- <!-- START CODE -->
-- <!-- END CODE -->
-- <!-- LANGUAGE: <language> -->.`,
+		client:       client,
+		model:        model,
+		systemPrompt: `You are an expert software engineer AI assistant. Write clean, efficient, and well-documented code. Address the user's request directly. Include comments for complex sections. Follow best practices. Use the requested programming language or the most appropriate one. Only respond with code, no explanations or additional text.`,
 	}
 }
 
